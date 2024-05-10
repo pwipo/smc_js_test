@@ -516,6 +516,10 @@ SmcEmulator.SourceList = function (executionContextTool, configurationName, exec
     /** @type {SMCApi.CFG.ISourceManaged[]} */
     this.sources = sources || [];
 
+    this.setConfigurationName = function (configurationName) {
+        this.configurationName = configurationName;
+    }
+
     this.countSource = function () {
         return sources.length;
     };
@@ -638,7 +642,7 @@ SmcEmulator.SourceList.prototype = Object.create(SMCApi.CFG.ISourceListManaged);
 /**
  * ExecutionContext
  * @param executionContextTool {SmcEmulator.ExecutionContextTool}
- * @param configuration {SmcEmulator.Configuration}
+ * @param [configuration] {SmcEmulator.Configuration}
  * @param name {string}
  * @param {SMCApi.CFG.IExecutionContext[]} [executionContexts]
  * @param {SMCApi.CFG.IConfiguration[]} [managedConfigurations]
@@ -649,7 +653,7 @@ SmcEmulator.SourceList.prototype = Object.create(SMCApi.CFG.ISourceListManaged);
  */
 SmcEmulator.ExecutionContext = function (executionContextTool, configuration, name, executionContexts, managedConfigurations, sources, maxWorkInterval, type) {
     SMCApi.CFG.IExecutionContextManaged.call(this);
-    SmcEmulator.SourceList.call(this, executionContextTool, configuration.getName(), name, sources || []);
+    SmcEmulator.SourceList.call(this, executionContextTool, configuration != null ? configuration.getName() : "default", name, sources || []);
 
     this.executionContextTool = executionContextTool;
     this.configuration = configuration;
@@ -667,6 +671,7 @@ SmcEmulator.ExecutionContext = function (executionContextTool, configuration, na
 
     this.setConfiguration = function (configuration) {
         this.configuration = configuration;
+        this.setConfigurationName(configuration.getName());
     }
 
     this.setName = function (name) {
@@ -1075,7 +1080,7 @@ SmcEmulator.ConfigurationTool.prototype = Object.create(SMCApi.ConfigurationTool
  */
 SmcEmulator.ExecutionContextTool = function (input, managedConfigurations, executionContextsOutput, executionContexts, name, type) {
     SMCApi.ExecutionContextTool.call(this);
-    SmcEmulator.ExecutionContext.call(this);
+    SmcEmulator.ExecutionContext.call(this, null, name, null, null, null);
 
     /** @type {(SMCApi.IAction[])[]} */
     this.input = input || [];
@@ -1104,6 +1109,19 @@ SmcEmulator.ExecutionContextTool = function (input, managedConfigurations, execu
     this.flowControlTool = new SmcEmulator.FlowControlTool(this, executionContextsOutput, executionContexts);
     // const that = this;
 
+    /**
+     *
+     * @param configurationTool {SmcEmulator.ConfigurationTool}
+     */
+    this.init = function (configurationTool) {
+        this.configuration = configurationTool;
+        this.setConfiguration(this.configuration);
+    };
+
+    this.getOutput = function () {
+        return this.output;
+    };
+
     this.addMessage = function (value) {
         if (value == null)
             throw new SMCApi.ModuleException("value");
@@ -1122,6 +1140,7 @@ SmcEmulator.ExecutionContextTool = function (input, managedConfigurations, execu
             ));
         }
     };
+
     this.addError = function (value) {
         if (value == null)
             throw new SMCApi.ModuleException("value");
@@ -1140,6 +1159,7 @@ SmcEmulator.ExecutionContextTool = function (input, managedConfigurations, execu
             ));
         }
     };
+
     this.addLog = function (value) {
         if (value == null)
             throw new SMCApi.ModuleException("value");
@@ -1164,9 +1184,11 @@ SmcEmulator.ExecutionContextTool = function (input, managedConfigurations, execu
     this.countCommands = function (sourceId) {
         return this.getMessagesAll(sourceId).length;
     };
+
     this.countCommandsFromExecutionContext = function (executionContext) {
         return 0;
     };
+
     this.getMessages = function (sourceId, fromIndex, toIndex) {
         let list = this.filter(this.getMessagesAll(sourceId), SMCApi.ActionType.EXECUTE, SMCApi.MessageType.DATA);
         if (fromIndex != null && toIndex != null)
@@ -1196,9 +1218,11 @@ SmcEmulator.ExecutionContextTool = function (input, managedConfigurations, execu
             list = list.slice(fromIndex, toIndex);
         return list;
     };
+
     this.getCommandsFromExecutionContext = function (executionContext, fromIndex, toIndex) {
         return [];
     };
+
     this.isError = function (action) {
         let result = true;
         do {
@@ -1212,12 +1236,15 @@ SmcEmulator.ExecutionContextTool = function (input, managedConfigurations, execu
         } while (false);
         return result;
     };
+
     this.getConfigurationControlTool = function () {
         return this.configurationControlTool;
     };
+
     this.getFlowControlTool = function () {
         return this.flowControlTool;
     };
+
     this.isNeedStop = function () {
         return false;
     };
@@ -1393,3 +1420,132 @@ SmcEmulator.FlowControlTool = function (executionContextTool, executionContextsO
 
 };
 SmcEmulator.FlowControlTool.prototype = Object.create(SMCApi.FlowControlTool);
+
+/**
+ *
+ * @param configurationTool {SmcEmulator.ConfigurationTool}
+ * @param {SMCApi.Module} [module]
+ * @constructor
+ */
+SmcEmulator.Process = function (configurationTool, module) {
+    this.configurationTool = configurationTool;
+    this.module = module;
+
+    this.getConfigurationTool = function () {
+        return this.configurationTool;
+    };
+
+    /**
+     *
+     * @param executionContextTool {SmcEmulator.ExecutionContextTool}
+     * @return {SMCApi.IMessage[]}
+     */
+    this.fullLifeCycle = function (executionContextTool) {
+        /** @type {SMCApi.IMessage[]} */
+        const result = [];
+        this.start().forEach(o => result.push(o));
+        this.execute(executionContextTool).forEach(o => result.push(o));
+        this.update().forEach(o => result.push(o));
+        this.execute(executionContextTool).forEach(o => result.push(o));
+        this.stop().forEach(o => result.push(o));
+        return result;
+    };
+
+    /**
+     *
+     * @return {SMCApi.IMessage[]}
+     */
+    this.start = function () {
+        /** @type {SMCApi.IMessage[]} */
+        const result = [];
+        if (this.module == null)
+            return result;
+
+        result.push(new SmcEmulator.Message(SMCApi.MessageType.ACTION_START, new Date(), new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER)));
+
+        try {
+            this.module.start(this.configurationTool);
+        } catch (e) {
+            result.push(new SmcEmulator.Message(SMCApi.MessageType.ACTION_ERROR, new Date(), new SmcEmulator.Value("error " + e.message, SMCApi.ValueType.STRING)));
+        }
+
+        result.push(new SmcEmulator.Message(SMCApi.MessageType.ACTION_STOP, new Date(), new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER)));
+
+        return result;
+    };
+
+    /**
+     *
+     * @param executionContextTool {SmcEmulator.ExecutionContextTool}
+     * @return {SMCApi.IMessage[]}
+     */
+    this.execute = function (executionContextTool) {
+        /** @type {SMCApi.IMessage[]} */
+        const result = [];
+        if (this.module == null)
+            return result;
+
+        this.configurationTool.init(executionContextTool);
+        executionContextTool.init(this.configurationTool);
+        result.push(new SmcEmulator.Message(SMCApi.MessageType.ACTION_START, new Date(), new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER)));
+
+        try {
+            const output = [];
+            executionContextTool.getOutput().forEach(o => output.push(o));
+            executionContextTool.getOutput().length = 0;
+            this.module.process(
+                this.configurationTool,
+                executionContextTool
+            );
+            executionContextTool.getOutput().forEach(o => result.push(o));
+            let array = output.concat(executionContextTool.getOutput());
+            executionContextTool.getOutput().length = 0;
+            array.forEach(o => executionContextTool.getOutput().push(o));
+        } catch (e) {
+            result.push(new SmcEmulator.Message(SMCApi.MessageType.ACTION_ERROR, new Date(), new SmcEmulator.Value("error " + e.message, SMCApi.ValueType.STRING)));
+        }
+
+        result.push(new SmcEmulator.Message(SMCApi.MessageType.ACTION_STOP, new Date(), new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER)));
+
+        return result;
+    };
+
+    this.update = function () {
+        /** @type {SMCApi.IMessage[]} */
+        const result = [];
+        if (this.module == null)
+            return result;
+
+        result.push(new SmcEmulator.Message(SMCApi.MessageType.ACTION_START, new Date(), new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER)));
+
+        try {
+            this.module.update(this.configurationTool);
+        } catch (e) {
+            result.push(new SmcEmulator.Message(SMCApi.MessageType.ACTION_ERROR, new Date(), new SmcEmulator.Value("error " + e.message, SMCApi.ValueType.STRING)));
+        }
+
+        result.push(new SmcEmulator.Message(SMCApi.MessageType.ACTION_STOP, new Date(), new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER)));
+
+        return result;
+    };
+
+    this.stop = function () {
+        /** @type {SMCApi.IMessage[]} */
+        const result = [];
+        if (this.module == null)
+            return result;
+
+        result.push(new SmcEmulator.Message(SMCApi.MessageType.ACTION_START, new Date(), new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER)));
+
+        try {
+            this.module.stop(this.configurationTool);
+        } catch (e) {
+            result.push(new SmcEmulator.Message(SMCApi.MessageType.ACTION_ERROR, new Date(), new SmcEmulator.Value("error " + e.message, SMCApi.ValueType.STRING)));
+        }
+
+        result.push(new SmcEmulator.Message(SMCApi.MessageType.ACTION_STOP, new Date(), new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER)));
+
+        return result;
+    };
+
+}
