@@ -140,7 +140,7 @@ SmcEmulator.Command.prototype = Object.create(SMCApi.ICommand);
  * @constructor
  */
 SmcEmulator.ModuleType = function (name, minCountSources, maxCountSources, minCountExecutionContexts, maxCountExecutionContexts, minCountManagedConfigurations, maxCountManagedConfigurations) {
-    this.name = name;
+    this.namev = name;
     this.minCountSources = minCountSources;
     this.maxCountSources = maxCountSources;
     this.minCountExecutionContexts = minCountExecutionContexts;
@@ -157,11 +157,11 @@ SmcEmulator.ModuleType = function (name, minCountSources, maxCountSources, minCo
  */
 SmcEmulator.Module = function (name, types) {
     SMCApi.CFG.IModule.call(this);
-    this.name = name;
+    this.namev = name;
     this.types = types || [new SmcEmulator.ModuleType("default", 0, -1, 0, -1, 0, -1)];
 
     this.getName = function () {
-        return this.name;
+        return this.namev;
     };
 
     this.countTypes = function () {
@@ -169,7 +169,7 @@ SmcEmulator.Module = function (name, types) {
     };
 
     this.getTypeName = function (typeId) {
-        return this.types[typeId].name;
+        return this.types[typeId].namev;
     };
 
     this.getMinCountSources = function (typeId) {
@@ -209,7 +209,7 @@ SmcEmulator.Module.prototype = Object.create(SMCApi.CFG.IModule);
 SmcEmulator.Container = function (executionContextTool, name, containers, configurations) {
     SMCApi.CFG.IContainerManaged.call(this);
     this.executionContextTool = executionContextTool;
-    this.name = name;
+    this.namev = name;
     this.enable = true;
     this.containers = containers || [];
     this.configurations = configurations || [];
@@ -222,7 +222,7 @@ SmcEmulator.Container = function (executionContextTool, name, containers, config
     }
 
     this.getName = function () {
-        return this.name;
+        return this.namev;
     };
 
     this.isEnable = function () {
@@ -307,7 +307,7 @@ SmcEmulator.Configuration = function (executionContextTool, container, module, n
     /** @type {SMCApi.CFG.IModule} */
     this.module = module;
     /** @type {string} */
-    this.name = name;
+    this.namev = name;
     /** @type {string} */
     this.description = description;
     /** @type {Map.<string, SMCApi.IValue>} */
@@ -348,7 +348,7 @@ SmcEmulator.Configuration = function (executionContextTool, container, module, n
     }
 
     this.setName = function (name) {
-        this.name = name;
+        this.namev = name;
         this.executionContextTool.add(SMCApi.MessageType.CONFIGURATION_CONTROL_CONFIGURATION_UPDATE, this.getName());
     };
 
@@ -453,7 +453,7 @@ SmcEmulator.Configuration = function (executionContextTool, container, module, n
     };
 
     this.getName = function () {
-        return this.name;
+        return this.namev;
     };
 
     this.getDescription = function () {
@@ -657,7 +657,7 @@ SmcEmulator.ExecutionContext = function (executionContextTool, configuration, na
 
     this.executionContextTool = executionContextTool;
     this.configuration = configuration;
-    this.name = name;
+    this.namev = name;
     this.executionContexts = executionContexts || [];
     this.managedConfigurations = managedConfigurations || [];
     // this.sourceList = new SmcEmulator.SourceList(executionContextTool, configuration.getName(), name, sources || []);
@@ -675,7 +675,7 @@ SmcEmulator.ExecutionContext = function (executionContextTool, configuration, na
     }
 
     this.setName = function (name) {
-        this.name = name;
+        this.namev = name;
     };
 
     this.setMaxWorkInterval = function (maxWorkInterval) {
@@ -759,7 +759,7 @@ SmcEmulator.ExecutionContext = function (executionContextTool, configuration, na
     };
 
     this.getName = function () {
-        return this.name;
+        return this.namev;
     };
 
     this.getMaxWorkInterval = function () {
@@ -956,16 +956,16 @@ SmcEmulator.Source.prototype = Object.create(SMCApi.CFG.ISourceManaged);
 SmcEmulator.FileTool = function (name, exists, data, children) {
     SMCApi.FileTool.call(this);
 
-    this.name = name;
+    this.namev = name;
     this.exists = exists;
     this.data = data;
     this.children = children;
 
     this.getName = function () {
-        return this.name;
+        return this.namev;
     };
 
-    this.exists = function () {
+    this.isExists = function () {
         return this.exists;
     };
 
@@ -990,9 +990,9 @@ SmcEmulator.FileTool.prototype = Object.create(SMCApi.FileTool);
 
 /**
  * ConfigurationTool
- * @param configuration {SmcEmulator.Configuration}
- * @param homeFolder {SmcEmulator.FileTool}
- * @param workDirectory {string}
+ * @param [configuration] {SmcEmulator.Configuration}
+ * @param [homeFolder] {SmcEmulator.FileTool}
+ * @param [workDirectory] {string}
  * @param {string} [name]
  * @param {string} [description]
  * @param {Map.<string, SMCApi.IValue>} [settings]
@@ -1001,16 +1001,24 @@ SmcEmulator.FileTool.prototype = Object.create(SMCApi.FileTool);
 SmcEmulator.ConfigurationTool = function (configuration, homeFolder, workDirectory, name, description, settings) {
     SMCApi.ConfigurationTool.call(this);
     SmcEmulator.Configuration.call(this,
-        configuration.executionContextTool, configuration.container, configuration.module, name || configuration.name, description || configuration.description, settings || configuration.settings,
-        configuration.variables, configuration.executionContexts, configuration.bufferSize, configuration.threadBufferSize
+        configuration != null ? configuration.executionContextTool : null,
+        configuration != null ? configuration.container : null,
+        configuration != null ? configuration.module : null,
+        name || (configuration != null ? configuration.namev : "default"),
+        description || (configuration != null ? configuration.description : null),
+        settings || (configuration != null ? configuration.description : null),
+        configuration != null ? configuration.variables : null,
+        configuration != null ? configuration.executionContexts : null,
+        configuration != null ? configuration.bufferSize : null,
+        configuration != null ? configuration.threadBufferSize : null,
     );
 
-    this.homeFolder = homeFolder;
-    this.workDirectory = workDirectory;
+    this.homeFolder = homeFolder || new SmcEmulator.FileTool("tmpdir", false, null, []);
+    this.workDirectory = workDirectory || "tmpdir";
     /** @type {Map.<string, boolean>} */
     this.variablesChangeFlag = new Map();
     const that = this;
-    this.getAllVariables().forEach(v => that.variablesChangeFlag.set(v.name, true));
+    this.getAllVariables().forEach(v => that.variablesChangeFlag.set(v.namev, true));
 
     this.init = function (executionContextTool) {
         this.setExecutionContextTool(executionContextTool);
@@ -1094,7 +1102,7 @@ SmcEmulator.ExecutionContextTool = function (input, managedConfigurations, execu
     this.executionContexts = executionContexts;
     if (this.executionContexts != null)
         this.executionContexts.forEach(ec => this.executionContextsOutput.push(null));
-    this.name = name;
+    this.namev = name;
     this.type = type;
 
     // currentTread = Thread.currentThread();
@@ -1106,7 +1114,7 @@ SmcEmulator.ExecutionContextTool = function (input, managedConfigurations, execu
     Array.from(moduleMap.values()).forEach(m => this.modules.push(m));
 
     this.configurationControlTool = new SmcEmulator.ConfigurationControlTool(this, this.modules, this.managedConfigurations);
-    this.flowControlTool = new SmcEmulator.FlowControlTool(this, executionContextsOutput, executionContexts);
+    this.flowControlTool = new SmcEmulator.FlowControlTool(this, this.executionContextsOutput, this.executionContexts);
     // const that = this;
 
     /**
