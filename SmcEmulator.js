@@ -1186,6 +1186,19 @@ SmcEmulator.ExecutionContextTool = function (input, managedConfigurations, execu
         ));
     };
 
+    this.countSource = function () {
+        return this.input.length
+    }
+
+    this.getSource = function (id) {
+        let sources = [];
+        if (this.input !== null) {
+            for (let i = 0; i < input.size(); i++)
+                sources.add(new SmcEmulator.Source(this, this.configuration.getName(), this.getName(), new SmcEmulator.ExecutionContext(this, null, String.valueOf(i)), null, null, false, null, SMCApi.SourceType.EXECUTION_CONTEXT, i));
+        }
+        return new SmcEmulator.SourceList(this, configuration.getName(), getName(), sources).getSource(id);
+    }
+
     /**
      *
      * @param sourceId {number}
