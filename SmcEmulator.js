@@ -56,15 +56,15 @@ SmcEmulator.Value.prototype = Object.create(SMCApi.IValue);
 
 /**
  * Message
- * @param type {SMCApi.MessageType}
  * @param value {SMCApi.IValue}
+ * @param type {SMCApi.MessageType}
  * @param [date] {Date}
  * @constructor
  */
-SmcEmulator.Message = function (type, value, date) {
+SmcEmulator.Message = function (value, type, date) {
     SMCApi.IMessage.call(this);
 
-    this.type = type;
+    this.type = type || SMCApi.MessageType.DATA;
     this.value = value;
     this.date = date || new Date();
 
@@ -97,7 +97,7 @@ SmcEmulator.Action = function (messages, type) {
     SMCApi.IAction.call(this);
 
     this.messages = messages;
-    this.type = type;
+    this.type = type || SMCApi.ActionType.EXECUTE;
 
     this.getMessages = function () {
         return this.messages;
@@ -120,7 +120,7 @@ SmcEmulator.Command = function (actions, type) {
     SMCApi.ICommand.call(this);
 
     this.actions = actions;
-    this.type = type;
+    this.type = type || SMCApi.CommandType.EXECUTE;
 
     this.getActions = function () {
         return this.actions;
@@ -1138,7 +1138,7 @@ SmcEmulator.ExecutionContextTool = function (input, managedConfigurations, execu
     };
 
     this.add = function (messageType, value) {
-        this.output.push(new SmcEmulator.Message(messageType, new SmcEmulator.Value(value)));
+        this.output.push(new SmcEmulator.Message(new SmcEmulator.Value(value), messageType));
     };
 
     this.addMessage = function (value) {
@@ -1147,14 +1147,14 @@ SmcEmulator.ExecutionContextTool = function (input, managedConfigurations, execu
         if (Array.isArray(value)) {
             const date = new Date();
             value.forEach(v => this.output.push(new SmcEmulator.Message(
-                SMCApi.MessageType.DATA,
                 new SmcEmulator.Value(v),
+                SMCApi.MessageType.DATA,
                 date
             )));
         } else {
             this.output.push(new SmcEmulator.Message(
-                SMCApi.MessageType.DATA,
-                new SmcEmulator.Value(value)
+                new SmcEmulator.Value(value),
+                SMCApi.MessageType.DATA
             ));
         }
     };
@@ -1165,14 +1165,14 @@ SmcEmulator.ExecutionContextTool = function (input, managedConfigurations, execu
         if (Array.isArray(value)) {
             const date = new Date();
             value.forEach(v => this.output.push(new SmcEmulator.Message(
-                SMCApi.MessageType.ERROR,
                 new SmcEmulator.Value(v),
+                SMCApi.MessageType.ERROR,
                 date
             )));
         } else {
             this.output.push(new SmcEmulator.Message(
-                SMCApi.MessageType.ERROR,
-                new SmcEmulator.Value(value)
+                new SmcEmulator.Value(value),
+                SMCApi.MessageType.ERROR
             ));
         }
     };
@@ -1181,8 +1181,8 @@ SmcEmulator.ExecutionContextTool = function (input, managedConfigurations, execu
         if (value == null)
             throw new SMCApi.ModuleException("value");
         this.output.push(new SmcEmulator.Message(
-            SMCApi.MessageType.LOG,
-            new SmcEmulator.Value(value)
+            new SmcEmulator.Value(value),
+            SMCApi.MessageType.LOG
         ));
     };
 
@@ -1490,15 +1490,15 @@ SmcEmulator.Process = function (configurationTool, module) {
         if (this.module == null)
             return result;
 
-        result.push(new SmcEmulator.Message(SMCApi.MessageType.ACTION_START, new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER)));
+        result.push(new SmcEmulator.Message(new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER), SMCApi.MessageType.ACTION_START));
 
         try {
             this.module.start(this.configurationTool);
         } catch (e) {
-            result.push(new SmcEmulator.Message(SMCApi.MessageType.ACTION_ERROR, new SmcEmulator.Value("error " + e.message, SMCApi.ValueType.STRING)));
+            result.push(new SmcEmulator.Message(new SmcEmulator.Value("error " + e.message, SMCApi.ValueType.STRING), SMCApi.MessageType.ACTION_ERROR));
         }
 
-        result.push(new SmcEmulator.Message(SMCApi.MessageType.ACTION_STOP, new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER)));
+        result.push(new SmcEmulator.Message(new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER), SMCApi.MessageType.ACTION_STOP));
 
         return result;
     };
@@ -1516,7 +1516,7 @@ SmcEmulator.Process = function (configurationTool, module) {
 
         this.configurationTool.init(executionContextTool);
         executionContextTool.init(this.configurationTool);
-        result.push(new SmcEmulator.Message(SMCApi.MessageType.ACTION_START, new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER)));
+        result.push(new SmcEmulator.Message(new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER), SMCApi.MessageType.ACTION_START));
 
         try {
             const output = [];
@@ -1531,10 +1531,10 @@ SmcEmulator.Process = function (configurationTool, module) {
             executionContextTool.getOutput().length = 0;
             array.forEach(o => executionContextTool.getOutput().push(o));
         } catch (e) {
-            result.push(new SmcEmulator.Message(SMCApi.MessageType.ACTION_ERROR, new SmcEmulator.Value("error " + e.message, SMCApi.ValueType.STRING)));
+            result.push(new SmcEmulator.Message(new SmcEmulator.Value("error " + e.message, SMCApi.ValueType.STRING), SMCApi.MessageType.ACTION_ERROR));
         }
 
-        result.push(new SmcEmulator.Message(SMCApi.MessageType.ACTION_STOP, new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER)));
+        result.push(new SmcEmulator.Message(new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER), SMCApi.MessageType.ACTION_STOP));
 
         return result;
     };
@@ -1545,15 +1545,15 @@ SmcEmulator.Process = function (configurationTool, module) {
         if (this.module == null)
             return result;
 
-        result.push(new SmcEmulator.Message(SMCApi.MessageType.ACTION_START, new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER)));
+        result.push(new SmcEmulator.Message(new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER), SMCApi.MessageType.ACTION_START));
 
         try {
             this.module.update(this.configurationTool);
         } catch (e) {
-            result.push(new SmcEmulator.Message(SMCApi.MessageType.ACTION_ERROR, new SmcEmulator.Value("error " + e.message, SMCApi.ValueType.STRING)));
+            result.push(new SmcEmulator.Message(new SmcEmulator.Value("error " + e.message, SMCApi.ValueType.STRING), SMCApi.MessageType.ACTION_ERROR));
         }
 
-        result.push(new SmcEmulator.Message(SMCApi.MessageType.ACTION_STOP, new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER)));
+        result.push(new SmcEmulator.Message(new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER), SMCApi.MessageType.ACTION_STOP));
 
         return result;
     };
@@ -1564,15 +1564,15 @@ SmcEmulator.Process = function (configurationTool, module) {
         if (this.module == null)
             return result;
 
-        result.push(new SmcEmulator.Message(SMCApi.MessageType.ACTION_START, new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER)));
+        result.push(new SmcEmulator.Message(new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER), SMCApi.MessageType.ACTION_START));
 
         try {
             this.module.stop(this.configurationTool);
         } catch (e) {
-            result.push(new SmcEmulator.Message(SMCApi.MessageType.ACTION_ERROR, new SmcEmulator.Value("error " + e.message, SMCApi.ValueType.STRING)));
+            result.push(new SmcEmulator.Message(new SmcEmulator.Value("error " + e.message, SMCApi.ValueType.STRING), SMCApi.MessageType.ACTION_ERROR));
         }
 
-        result.push(new SmcEmulator.Message(SMCApi.MessageType.ACTION_STOP, new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER)));
+        result.push(new SmcEmulator.Message(new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER), SMCApi.MessageType.ACTION_STOP));
 
         return result;
     };
