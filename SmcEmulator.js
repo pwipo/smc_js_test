@@ -33,10 +33,13 @@ SmcEmulator.Value = function (value, type) {
             this.type = SMCApi.ValueType.BYTES;
         } else if (value === false || value === true) {
             this.type = SMCApi.ValueType.BOOLEAN;
-        } else if (!Number.isInteger(value) && Number.isFinite(value)) {
-            this.type = SMCApi.ValueType.DOUBLE;
-        } else if (Number.isInteger(value)) {
-            this.type = SMCApi.ValueType.LONG;
+            // } else if (!Number.isInteger(value) && Number.isFinite(value)) {
+            //     this.type = SMCApi.ValueType.DOUBLE;
+            // } else if (Number.isInteger(value)) {
+            //     this.type = SMCApi.ValueType.LONG;
+        } else if (value instanceof Number) {
+            const intValue = Math.round(value);
+            valueType = value === intValue ? SMCApi.ValueType.LONG : SMCApi.ValueType.DOUBLE;
         } else {
             this.type = SMCApi.ValueType.DOUBLE;
             this.value = value.doubleValue ? value.doubleValue() : 0
@@ -1237,7 +1240,7 @@ SmcEmulator.ExecutionContextTool = function (input, managedConfigurations, execu
             .filter(a => actionType == null || actionType === a.getType())
             .map(a => {
                 const collect = a.getMessages().filter(m => messageType == null || messageType === m.getMessageType());
-                return SmcEmulator.Action(collect, a.getType());
+                return new SmcEmulator.Action(collect, a.getType());
             });
     }
 
