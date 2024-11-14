@@ -1078,6 +1078,10 @@ SmcEmulator.ConfigurationTool = function (configuration, homeFolder, workDirecto
         console.log(`${new Date()}: Log Cfg 0: ${text}`)
     };
 
+    this.getInfo = function (key) {
+        return null;
+    };
+
 };
 SmcEmulator.ConfigurationTool.prototype = Object.create(SMCApi.ConfigurationTool);
 /**
