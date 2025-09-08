@@ -1503,6 +1503,7 @@ SmcEmulator.Process = function (configurationTool, module) {
             this.module.start(this.configurationTool);
         } catch (e) {
             result.push(new SmcEmulator.Message(new SmcEmulator.Value("error " + e.message, SMCApi.ValueType.STRING), SMCApi.MessageType.ACTION_ERROR));
+            console.log(e.stack);
         }
 
         result.push(new SmcEmulator.Message(new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER), SMCApi.MessageType.ACTION_STOP));
@@ -1539,6 +1540,7 @@ SmcEmulator.Process = function (configurationTool, module) {
             array.forEach(o => executionContextTool.getOutput().push(o));
         } catch (e) {
             result.push(new SmcEmulator.Message(new SmcEmulator.Value("error " + e.message, SMCApi.ValueType.STRING), SMCApi.MessageType.ACTION_ERROR));
+            console.log(e.stack);
         }
 
         result.push(new SmcEmulator.Message(new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER), SMCApi.MessageType.ACTION_STOP));
@@ -1558,6 +1560,7 @@ SmcEmulator.Process = function (configurationTool, module) {
             this.module.update(this.configurationTool);
         } catch (e) {
             result.push(new SmcEmulator.Message(new SmcEmulator.Value("error " + e.message, SMCApi.ValueType.STRING), SMCApi.MessageType.ACTION_ERROR));
+            console.log(e.stack);
         }
 
         result.push(new SmcEmulator.Message(new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER), SMCApi.MessageType.ACTION_STOP));
@@ -1577,6 +1580,7 @@ SmcEmulator.Process = function (configurationTool, module) {
             this.module.stop(this.configurationTool);
         } catch (e) {
             result.push(new SmcEmulator.Message(new SmcEmulator.Value("error " + e.message, SMCApi.ValueType.STRING), SMCApi.MessageType.ACTION_ERROR));
+            console.log(e.stack);
         }
 
         result.push(new SmcEmulator.Message(new SmcEmulator.Value(1, SMCApi.ValueType.INTEGER), SMCApi.MessageType.ACTION_STOP));
