@@ -37,9 +37,9 @@ SmcEmulator.Value = function (value, type) {
             //     this.type = SMCApi.ValueType.DOUBLE;
             // } else if (Number.isInteger(value)) {
             //     this.type = SMCApi.ValueType.LONG;
-        } else if (value instanceof Number) {
+        } else if (value instanceof Number || typeof (value) === "number") {
             const intValue = Math.round(value);
-            valueType = value === intValue ? SMCApi.ValueType.LONG : SMCApi.ValueType.DOUBLE;
+            this.type = value === intValue ? SMCApi.ValueType.LONG : SMCApi.ValueType.DOUBLE;
         } else {
             this.type = SMCApi.ValueType.DOUBLE;
             this.value = value.doubleValue ? value.doubleValue() : 0
